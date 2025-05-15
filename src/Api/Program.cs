@@ -14,16 +14,6 @@ builder.Host.UseSerilog((hostBuilderContext, services, loggerConfiguration) =>
     loggerConfiguration.AddApplicationInsightsLogging(services, hostBuilderContext.Configuration);
 });
 
-// setup database connection (used for in memory SQLite).
-// SQLite in memory requires an open connection during the application lifetime
-#pragma warning disable S125
-// to use a file based SQLite use: "Filename=../realworld.db";
-#pragma warning restore S125
-const string connectionString = "Filename=:memory:";
-var connection = new SqliteConnection(connectionString);
-connection.Open();
-
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -66,10 +56,22 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
     });
 
 // for SQLite in memory a connection is provided rather than a connection string
-builder.Services.AddDbContext<ConduitContext>(options => { options.UseSqlite(connection); });
+builder.Services.AddDbContext<ConduitContext>(options => { options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")); });
 
 ProblemDetailsExtensions.AddProblemDetails(builder.Services);
 builder.Services.ConfigureOptions<ProblemDetailsLogging>();
+
+var MyAllowSpecificOrigins = "myPolicy";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+                      policy =>
+                      {
+                          policy.WithOrigins("*")
+                          .AllowAnyHeader()
+                          .AllowAnyMethod();
+                      });
+});
 
 var app = builder.Build();
 
@@ -88,6 +90,9 @@ app.UseSerilogRequestLogging(options =>
         diagnosticContext.Set("UserId", httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "")
 );
 
+
+
+app.UseCors(MyAllowSpecificOrigins);
 
 app.UseProblemDetails();
 app.UseAuthentication();
@@ -115,7 +120,6 @@ catch (Exception ex)
 }
 finally
 {
-    connection.Close();
     Log.CloseAndFlush();
     Thread.Sleep(2000);
 }

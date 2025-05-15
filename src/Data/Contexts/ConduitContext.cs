@@ -36,7 +36,8 @@ public class ConduitContext(DbContextOptions<ConduitContext> options) : DbContex
         {
             entity.HasKey(e => new { e.ArticleId, UserId = e.Username });
             entity.HasOne(x => x.Article).WithMany(x => x.ArticleFavorites)
-                .HasForeignKey(x => x.ArticleId);
+                .HasForeignKey(x => x.ArticleId)
+                .OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(x => x.User).WithMany(x => x.ArticleFavorites);
         });
 
@@ -44,10 +45,12 @@ public class ConduitContext(DbContextOptions<ConduitContext> options) : DbContex
         {
             entity.HasOne(x => x.Article)
                 .WithMany(x => x.Comments)
-                .HasForeignKey(x => x.ArticleId);
+                .HasForeignKey(x => x.ArticleId)
+                .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.Author)
                 .WithMany(x => x.ArticleComments)
-                .HasForeignKey(x => x.Username);
+                .HasForeignKey(x => x.Username)
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<UserLink>(entity =>
@@ -59,7 +62,8 @@ public class ConduitContext(DbContextOptions<ConduitContext> options) : DbContex
 
             entity.HasOne(x => x.FollowerUser)
                 .WithMany(x => x.FollowedUsers)
-                .HasForeignKey(x => x.FollowerUsername);
+                .HasForeignKey(x => x.FollowerUsername)
+                .OnDelete(DeleteBehavior.NoAction);
         });
     }
 }
